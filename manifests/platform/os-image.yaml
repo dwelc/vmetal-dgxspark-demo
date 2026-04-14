@@ -1,7 +1,15 @@
 # os-image.yaml — arm64 Ubuntu 24.04 LTS minimal cloud image
 #
-# The image is served locally from the DGX Spark so the IPA ramdisk
-# (isolated on br-provision) can fetch it by IP.
+# Uses the public Ubuntu cloud image URL. The provisioned host (running IPA)
+# needs internet access to download this during provisioning. This is fine
+# since the node also needs internet for the vCluster join script (curl | sh).
+#
+# NOTE: image-checksum is required by vCluster Platform. Get the latest from:
+#   curl -sL https://cloud-images.ubuntu.com/minimal/releases/noble/release/SHA256SUMS | grep arm64
+#
+# For faster provisioning or air-gapped environments, cache the image locally:
+#   bash scripts/cache-os-image.sh
+# Then change the URL to: http://172.22.0.1:9000/ubuntu-24.04-minimal-cloudimg-arm64.img
 
 apiVersion: management.loft.sh/v1
 kind: OSImage
@@ -10,5 +18,6 @@ metadata:
 spec:
   displayName: "Ubuntu 24.04 LTS arm64 (Minimal)"
   properties:
-    metal3.vcluster.com/image-url: "http://172.22.0.1:9000/ubuntu-24.04-minimal-cloudimg-arm64.img"
+    metal3.vcluster.com/image-url: "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-arm64.img"
+    metal3.vcluster.com/image-checksum: "e9f5bce6025aa63592a579dab73425ffaa06e49d5d53cd1ddcb9f286b4b01830"
     metal3.vcluster.com/image-checksum-type: "sha256"

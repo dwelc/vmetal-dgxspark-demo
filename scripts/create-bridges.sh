@@ -81,6 +81,14 @@ if ! sudo iptables -t nat -C POSTROUTING -s "${PROVISION_CIDR}" ! -d "${PROVISIO
   sudo iptables -t nat -A POSTROUTING -s "${PROVISION_CIDR}" ! -d "${PROVISION_CIDR}" -o "${LAN_INTERFACE}" -j MASQUERADE
 fi
 
+# TCP MSS clamping — required for TLS to work through NAT.
+# Without this, large TLS handshake packets get silently dropped due to
+# path MTU issues, causing "TLS handshake timeout" on container image pulls.
+if ! sudo iptables -t mangle -C FORWARD -o "${LAN_INTERFACE}" -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null; then
+  sudo iptables -t mangle -A FORWARD -o "${LAN_INTERFACE}" -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+  log "TCP MSS clamping added."
+fi
+
 if ! command -v netfilter-persistent &>/dev/null; then
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y iptables-persistent
 fi

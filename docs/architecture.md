@@ -23,8 +23,8 @@ k3s cluster (x86)                              DGX Spark (arm64)
 │  dan-dev-2, dan-dev-3        │               │                              │
 │  (other k3s control plane)   │               │  sushy-tools    :8000        │
 │                              │               │  dnsmasq TFTP   :69          │
-│  vCluster Platform           │               │  ProxyDHCP      :67          │
-│  ArgoCD, Cilium, Longhorn    │               │  OS image server:9000        │
+│  vCluster Platform           │               │  dnsmasq DNS    :53          │
+│  ArgoCD, Cilium, Longhorn    │               │  ProxyDHCP      :67          │
 └──────────────────────────────┘               └──────────────────────────────┘
 ```
 
@@ -88,7 +88,28 @@ the standard `ironic-python-agent.kernel` and `.initramfs` names.
 
 | IP | Used by |
 |----|---------|
-| 172.22.0.1 | DGX Spark br-provision, dnsmasq TFTP/ProxyDHCP, OS image server |
+| 172.22.0.1 | DGX Spark br-provision, dnsmasq (TFTP + ProxyDHCP + DNS forwarder), IPA tarball server |
 | 172.22.0.2 | DHCP proxy pod (Multus) |
 | 172.22.0.3 | Ironic/metal3 pod (Multus) |
 | 172.22.0.11-15 | VMs (assigned by DHCP proxy) |
+
+## Provisioned node networking
+
+After Ironic writes the OS image to disk, the provisioned node boots Ubuntu.
+Network configuration comes from two sources:
+
+1. **Config drive (networkData Secret)** — Static IP, gateway (`172.22.0.1`),
+   and DNS (`172.22.0.1`) written by Ironic. Cloud-init reads this on first boot
+   and generates netplan config. This is the primary network configuration.
+
+2. **DHCP proxy** — Assigns an IP during PXE boot and IPA inspection. After the
+   OS is installed, the config drive's static config takes precedence.
+
+Outbound internet access for the provisioned node (needed for container image
+pulls) works via:
+
+- **Default gateway** `172.22.0.1` (DGX Spark bridge IP)
+- **NAT masquerade** on the DGX Spark (iptables POSTROUTING rule)
+- **TCP MSS clamping** on the DGX Spark (iptables mangle rule) — required to
+  prevent TLS handshake timeouts due to path MTU issues
+- **DNS forwarding** via dnsmasq on `172.22.0.1:53` → upstream `8.8.8.8`/`1.1.1.1`

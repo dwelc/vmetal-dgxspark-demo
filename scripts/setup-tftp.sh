@@ -49,7 +49,7 @@ SERVICE_FILE="/etc/systemd/system/dnsmasq-tftp.service"
 log "Installing dnsmasq ProxyDHCP + TFTP service..."
 sudo tee "${SERVICE_FILE}" > /dev/null <<EOF
 [Unit]
-Description=ProxyDHCP + TFTP for PXE boot (dnsmasq)
+Description=ProxyDHCP + TFTP + DNS for PXE boot (dnsmasq)
 After=network.target
 
 [Service]
@@ -57,7 +57,6 @@ Type=simple
 ExecStart=/usr/sbin/dnsmasq \\
   --enable-tftp \\
   --tftp-root=${TFTP_ROOT} \\
-  --port=0 \\
   --dhcp-range=${PROVISION_CIDR%/*},proxy \\
   --pxe-prompt="PXE" \\
   --pxe-service=ARM64_EFI,"PXE boot",snp-arm64.efi \\
@@ -65,7 +64,9 @@ ExecStart=/usr/sbin/dnsmasq \\
   --bind-interfaces \\
   --no-daemon \\
   --log-queries \\
-  --log-facility=-
+  --log-facility=- \\
+  --server=8.8.8.8 \\
+  --server=1.1.1.1
 Restart=on-failure
 RestartSec=3
 
@@ -86,13 +87,15 @@ fi
 
 echo ""
 echo "====================================================================="
-echo " ProxyDHCP + TFTP setup complete."
+echo " ProxyDHCP + TFTP + DNS setup complete."
 echo ""
-echo " TFTP root : ${TFTP_ROOT}"
-echo " iPXE file : ${TFTP_ROOT}/snp-arm64.efi"
-echo " ProxyDHCP : ${PROVISION_BRIDGE} (${PROVISION_CIDR})"
+echo " TFTP root  : ${TFTP_ROOT}"
+echo " iPXE file  : ${TFTP_ROOT}/snp-arm64.efi"
+echo " ProxyDHCP  : ${PROVISION_BRIDGE} (${PROVISION_CIDR})"
+echo " DNS forward: 8.8.8.8, 1.1.1.1"
 echo ""
-echo " This overrides the DHCP proxy's TFTP server address so"
-echo " UEFI PXE clients get iPXE from ${PROVISION_BRIDGE_IP}"
-echo " instead of the broken container TFTP."
+echo " dnsmasq provides:"
+echo "   - ProxyDHCP: overrides TFTP server to ${PROVISION_BRIDGE_IP}"
+echo "   - TFTP: serves arm64 iPXE binary"
+echo "   - DNS: forwards queries from provisioned nodes to upstream"
 echo "====================================================================="

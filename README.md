@@ -62,10 +62,17 @@ This sets up dnsmasq as ProxyDHCP + TFTP with a locally-built arm64 iPXE:
 bash scripts/setup-tftp.sh
 ```
 
-### 7. Cache OS image
+### 7. Cache OS image (optional)
+
+The OSImage manifest points at the public Ubuntu cloud image URL by default.
+The provisioned host downloads it during provisioning via NAT through the DGX Spark.
+
+For faster provisioning or air-gapped environments, cache it locally:
 
 ```bash
 bash scripts/cache-os-image.sh
+# Then update manifests/platform/os-image.yaml to use the local URL:
+#   http://172.22.0.1:9000/ubuntu-24.04-minimal-cloudimg-arm64.img
 ```
 
 ### 8. Join DGX Spark to k3s cluster

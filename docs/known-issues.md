@@ -125,3 +125,28 @@ HTTP/TFTP traffic to the DHCP proxy container (also 172.22.0.2 via Multus) gets
 delivered locally to the host instead of through the VXLAN to the container.
 
 **Fix:** Do NOT add 172.22.0.2 to the DGX Spark's br-provision. Only 172.22.0.1.
+
+## 11. Provisioned nodes have no DNS without networkData
+
+**Problem:** The vCP DHCP proxy serves IP addresses but not gateway or DNS
+DHCP options. Provisioned nodes boot with an IP but no default gateway, no DNS,
+and no internet access. Container image pulls (flannel, etc.) fail with
+"TLS handshake timeout" because DNS can't resolve registry hostnames.
+
+**Fix:** Each BareMetalHost needs a `spec.networkData` reference pointing at a
+Secret containing OpenStack-format network_data.json with static IP, gateway,
+and DNS. The `generate-bmh.sh` script creates these automatically. DNS is set
+to `172.22.0.1` (dnsmasq on the DGX Spark) which forwards to upstream resolvers.
+
+## 12. TLS handshake timeout on container image pulls (MSS clamping)
+
+**Problem:** Even with NAT and DNS working, HTTPS connections to container
+registries fail with "TLS handshake timeout." The TCP connection establishes
+but the TLS handshake (which involves large certificate packets) fails because
+packets exceed the path MTU and get silently dropped.
+
+**Fix:** TCP MSS clamping on the DGX Spark's FORWARD chain:
+```bash
+iptables -t mangle -A FORWARD -o enP7s7 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+```
+This is added automatically by `create-bridges.sh`.
