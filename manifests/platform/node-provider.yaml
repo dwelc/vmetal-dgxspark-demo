@@ -1,0 +1,104 @@
+# node-provider.yaml — Metal3 NodeProvider for DGX Spark demo
+#
+# Deploys Metal3, Ironic, DHCP, and Multus on an x86 k3s node.
+#
+# The helmValues configure nodeSelector so pods land on the x86 node
+# (where br-provision is bridged via VXLAN to the DGX Spark).
+#
+# Post-apply patches still required (chart doesn't expose these):
+#   - fsGroup: 994 on metal3 securityContext
+#   - HTTP_PORT=6180 env var on ironic container
+#   - PROVISIONING_INTERFACE=net1 env var on ironic container
+#   - Multus annotation on metal3 pod (k8s.v1.cni.cncf.io/networks)
+#   - IPA_BASEURI + IPA_FILENAME env vars on the IPA downloader init container
+#     (so it fetches the arm64 tarball from the DGX Spark image server)
+#
+# See README.md step 12 for the exact patch commands.
+# These patches persist across pod restarts (they're on the StatefulSet spec).
+
+apiVersion: management.loft.sh/v1
+kind: NodeProvider
+metadata:
+  name: metal3-provider
+spec:
+  displayName: "vMetal DGX Spark - Metal3 Provider"
+
+  metal3:
+    clusterRef:
+      cluster: loft-cluster
+      namespace: metal3-system
+
+    deploy:
+      multus:
+        enabled: true
+        helmValues: |
+          namespace: kube-system
+
+      metal3:
+        enabled: true
+        helmValues: |
+          ironic:
+            image:
+              tag: release-32.0
+          # Schedule on the x86 node with br-provision VXLAN
+          nodeSelector:
+            kubernetes.io/hostname: dan-dev-1
+
+      dhcp:
+        enabled: true
+        helmValues: |
+          # Schedule on the x86 node with br-provision VXLAN
+          nodeSelector:
+            kubernetes.io/hostname: dan-dev-1
+          networkAttachmentDefinition:
+            vip: 172.22.0.2/24
+            config: |
+              {
+                "cniVersion": "0.3.1",
+                "type": "bridge",
+                "bridge": "br-provision",
+                "ipam": {}
+              }
+
+    nodeTypes:
+      - name: small-node
+        resources:
+          cpu: "2"
+          memory: 4Gi
+        bareMetalHosts:
+          selector:
+            matchLabels:
+              demo: vmetal
+              vmetal-size: small
+        properties:
+          vcluster.com/os-image: ubuntu-noble-arm64
+          vcluster.com/cpu: "2"
+          vcluster.com/memory: 4Gi
+
+      - name: large-node
+        resources:
+          cpu: "4"
+          memory: 8Gi
+        bareMetalHosts:
+          selector:
+            matchLabels:
+              demo: vmetal
+              vmetal-size: large
+        properties:
+          vcluster.com/os-image: ubuntu-noble-arm64
+          vcluster.com/cpu: "4"
+          vcluster.com/memory: 8Gi
+
+      - name: gpu-node
+        resources:
+          cpu: "8"
+          memory: 16Gi
+        bareMetalHosts:
+          selector:
+            matchLabels:
+              demo: vmetal
+              vmetal-size: gpu
+        properties:
+          vcluster.com/os-image: ubuntu-noble-arm64
+          vcluster.com/cpu: "8"
+          vcluster.com/memory: 16Gi

@@ -1,0 +1,23 @@
+# metal3-provision-nad.yaml — NetworkAttachmentDefinition for metal3 pod
+#
+# Gives the metal3 (Ironic) pod a secondary interface on br-provision
+# so it can serve PXE boot files and receive IPA callbacks from VMs.
+
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: metal3-provision
+  namespace: metal3-system
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "type": "bridge",
+      "bridge": "br-provision",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          { "address": "172.22.0.3/24" }
+        ]
+      }
+    }

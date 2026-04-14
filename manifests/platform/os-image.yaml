@@ -1,0 +1,14 @@
+# os-image.yaml — arm64 Ubuntu 24.04 LTS minimal cloud image
+#
+# The image is served locally from the DGX Spark so the IPA ramdisk
+# (isolated on br-provision) can fetch it by IP.
+
+apiVersion: management.loft.sh/v1
+kind: OSImage
+metadata:
+  name: ubuntu-noble-arm64
+spec:
+  displayName: "Ubuntu 24.04 LTS arm64 (Minimal)"
+  properties:
+    metal3.vcluster.com/image-url: "http://172.22.0.1:9000/ubuntu-24.04-minimal-cloudimg-arm64.img"
+    metal3.vcluster.com/image-checksum-type: "sha256"

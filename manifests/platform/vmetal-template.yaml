@@ -1,0 +1,55 @@
+# vmetal-template.yaml — VirtualClusterTemplate for bare metal private nodes
+
+apiVersion: management.loft.sh/v1
+kind: VirtualClusterTemplate
+metadata:
+  name: vmetal-template
+spec:
+  displayName: "vMetal — DGX Spark Bare Metal Nodes"
+  description: >
+    vCluster backed by bare metal nodes provisioned on demand via the
+    Metal3 NodeProvider on NVIDIA DGX Spark.
+
+  owner:
+    team: loft-admins
+
+  template:
+    helmRelease:
+      chart:
+        version: 0.33.0
+      values: |
+        privateNodes:
+          enabled: true
+          autoNodes:
+            - provider: metal3-provider
+              dynamic:
+                - name: bm-node-pool-1
+                  limits:
+                    cpu: '{{ .Values.cpuLimit }}'
+        networking:
+          podCIDR: 10.64.0.0/16
+          serviceCIDR: 10.128.0.0/16
+        controlPlane:
+          backingStore:
+            etcd:
+              embedded:
+                enabled: true
+          distro:
+            k8s:
+              version: "{{ .Values.kubernetesVersion }}"
+
+  parameters:
+    - variable: kubernetesVersion
+      label: Kubernetes Version
+      defaultValue: v1.34.1
+      options:
+        - v1.34.1
+        - v1.35.0
+
+    - variable: cpuLimit
+      label: CPU Limit
+      defaultValue: "5"
+      options:
+        - "2"
+        - "5"
+        - "10"
