@@ -111,7 +111,7 @@ metadata:
     metal3.vcluster.com/gateway: "${PROVISION_GATEWAY}"
     metal3.vcluster.com/dns-servers: "${PROVISION_DNS}"
 spec:
-  online: true
+  online: false
   automatedCleaningMode: metadata
   bmc:
     address: ${redfish_addr}

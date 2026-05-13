@@ -92,14 +92,25 @@ kubectl taint node dgx-spark-1 vmetal=true:NoSchedule
 
 ### 9. Set up VXLAN tunnel
 
+Both ends are persisted via systemd-networkd so the tunnel survives reboots.
+
 On the DGX Spark:
 
 ```bash
 bash scripts/setup-vxlan.sh
 ```
 
-Then run the printed commands on dan-dev-1 (the k3s node). Also install
-CNI plugins on dan-dev-1:
+Then on the k3s node (dan-dev-1):
+
+```bash
+bash scripts/setup-vxlan-k3s.sh
+```
+
+The k3s script creates `br-provision` + `vxlan100`, writes
+`/etc/systemd/network/{10-br-provision,20-vxlan100}.{netdev,network}`,
+and ping-tests `172.22.0.1` at the end.
+
+Also install CNI plugins on dan-dev-1 (needed for Multus secondary interfaces):
 
 ```bash
 # On dan-dev-1:

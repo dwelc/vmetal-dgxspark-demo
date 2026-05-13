@@ -1,15 +1,14 @@
 # os-image.yaml — arm64 Ubuntu 24.04 LTS minimal cloud image
 #
-# Uses the public Ubuntu cloud image URL. The provisioned host (running IPA)
-# needs internet access to download this during provisioning. This is fine
-# since the node also needs internet for the vCluster join script (curl | sh).
+# Served locally from the DGX Spark's image cache server. This avoids
+# the problem of Ubuntu's rolling release/ directory where the image
+# (and its checksum) changes whenever Ubuntu publishes an update.
 #
-# NOTE: image-checksum is required by vCluster Platform. Get the latest from:
-#   curl -sL https://cloud-images.ubuntu.com/minimal/releases/noble/release/SHA256SUMS | grep arm64
-#
-# For faster provisioning or air-gapped environments, cache the image locally:
-#   bash scripts/cache-os-image.sh
-# Then change the URL to: http://172.22.0.1:9000/ubuntu-24.04-minimal-cloudimg-arm64.img
+# To refresh the cached image to a newer Ubuntu:
+#   1. bash scripts/cache-os-image.sh   (on DGX Spark, re-downloads)
+#   2. Update the checksum below with:
+#      sha256sum /srv/os-images/ubuntu-24.04-minimal-cloudimg-arm64.img
+#   3. kubectl apply -f manifests/platform/os-image.yaml
 
 apiVersion: management.loft.sh/v1
 kind: OSImage
@@ -18,6 +17,6 @@ metadata:
 spec:
   displayName: "Ubuntu 24.04 LTS arm64 (Minimal)"
   properties:
-    metal3.vcluster.com/image-url: "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-arm64.img"
-    metal3.vcluster.com/image-checksum: "e9f5bce6025aa63592a579dab73425ffaa06e49d5d53cd1ddcb9f286b4b01830"
+    metal3.vcluster.com/image-url: "http://172.22.0.1:9000/ubuntu-24.04-minimal-cloudimg-arm64.img"
+    metal3.vcluster.com/image-checksum: "0cc0a529a52109b52bf697a0d90bdd0f252e7ad91b3a67f70879d56d1f64e240"
     metal3.vcluster.com/image-checksum-type: "sha256"
