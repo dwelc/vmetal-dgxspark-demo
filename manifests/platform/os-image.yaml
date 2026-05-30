@@ -10,6 +10,5 @@ spec:
   displayName: "Ubuntu 24.04 LTS arm64 (Server)"
   properties:
     metal3.vcluster.com/image-url: "http://172.22.0.1:9000/ubuntu-24.04-server-cloudimg-arm64.img"
-    # TODO: replace with the actual sha256 after running cache-os-image.sh
-    metal3.vcluster.com/image-checksum: "REPLACE_ME_WITH_sha256sum_OF_DOWNLOADED_FILE"
+    metal3.vcluster.com/image-checksum: "6a61b967ba4a27dd1966f835a67643073ed55c2860ce3dc1cb0517282e6b8bec"
     metal3.vcluster.com/image-checksum-type: "sha256"
