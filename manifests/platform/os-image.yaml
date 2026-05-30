@@ -1,22 +1,15 @@
-# os-image.yaml — arm64 Ubuntu 24.04 LTS minimal cloud image
-#
-# Served locally from the DGX Spark's image cache server. This avoids
-# the problem of Ubuntu's rolling release/ directory where the image
-# (and its checksum) changes whenever Ubuntu publishes an update.
-#
-# To refresh the cached image to a newer Ubuntu:
-#   1. bash scripts/cache-os-image.sh   (on DGX Spark, re-downloads)
-#   2. Update the checksum below with:
-#      sha256sum /srv/os-images/ubuntu-24.04-minimal-cloudimg-arm64.img
-#   3. kubectl apply -f manifests/platform/os-image.yaml
+# Use the server image, not minimal — vCluster join script needs iptables-save.
+# Refresh: re-run cache-os-image.sh with UBUNTU_IMAGE_URL set to the server image,
+# then update the checksum below to sha256sum of the cached file.
 
 apiVersion: management.loft.sh/v1
 kind: OSImage
 metadata:
   name: ubuntu-noble-arm64
 spec:
-  displayName: "Ubuntu 24.04 LTS arm64 (Minimal)"
+  displayName: "Ubuntu 24.04 LTS arm64 (Server)"
   properties:
-    metal3.vcluster.com/image-url: "http://172.22.0.1:9000/ubuntu-24.04-minimal-cloudimg-arm64.img"
-    metal3.vcluster.com/image-checksum: "0cc0a529a52109b52bf697a0d90bdd0f252e7ad91b3a67f70879d56d1f64e240"
+    metal3.vcluster.com/image-url: "http://172.22.0.1:9000/ubuntu-24.04-server-cloudimg-arm64.img"
+    # TODO: replace with the actual sha256 after running cache-os-image.sh
+    metal3.vcluster.com/image-checksum: "REPLACE_ME_WITH_sha256sum_OF_DOWNLOADED_FILE"
     metal3.vcluster.com/image-checksum-type: "sha256"
