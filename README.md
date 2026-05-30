@@ -129,6 +129,25 @@ devices: "enp2s0 enP7s7"
 cni-exclusive: "false"     # required for Multus
 ```
 
+**Multus** — install thin Multus separately. The vmetal NodeProvider's bundled
+Multus chart hardcodes resources at 50Mi and the template doesn't expose
+`resources:` for override; under any CNI burst the daemon OOMs and the
+cluster can't recover. The NodeProvider in this repo therefore sets
+`multus.enabled: false`.
+
+Install the upstream thin daemonset directly:
+```bash
+curl -sfL https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/v4.2.4/deployments/multus-daemonset.yml \
+  | sed 's|namespace: kube-system|namespace: multus|g; s|:snapshot|:v4.2.4|g; s|memory: "50Mi"|memory: "300Mi"|g' \
+  | kubectl apply -n multus -f -
+# (create the `multus` namespace first if needed: kubectl create ns multus)
+```
+
+Thin mode is upstream-supported for resource-constrained / simpler-architecture
+deployments — see https://github.com/k8snetworkplumbingwg/multus-cni#thin-plugin-vs-thick-plugin.
+For our needs (no SR-IOV runtime config, no multus metrics endpoint), thin's
+per-call-fork model means CNI bursts can't cascade into OOM loops.
+
 **Longhorn** — tolerate the vmetal taint:
 ```yaml
 longhornManager:
@@ -188,15 +207,20 @@ These patches survive pod restarts (they're on the StatefulSet spec).
 They only need to be re-applied if the NodeProvider controller recreates
 the StatefulSets (e.g. after re-applying node-provider.yaml).
 
-### 13. Restore Multus CNI config (if Cilium removed it)
+### 13. Multus CNI config
 
-On dan-dev-1, check if Multus config exists:
+The thin Multus DaemonSet's init container writes `/etc/cni/net.d/00-multus.conf`
+on every pod start. If Cilium or another component removes the file, just roll
+the Multus DS — the init container will re-create it:
 
 ```bash
-sudo ls /etc/cni/net.d/00-multus.conf
-# If missing:
-sudo cp /etc/cni/net.d/00-multus.conf.cilium_bak /etc/cni/net.d/00-multus.conf
+kubectl -n multus rollout restart ds/kube-multus-ds
 ```
+
+(In the previous setup, vmetal's thick Multus daemon had a preStop hook that
+removed this file on shutdown; we kept a `00-multus.conf.cilium_bak` backup
+to restore it manually. With the externally-managed thin Multus that workaround
+is no longer needed.)
 
 ### 14. Register BareMetalHosts
 

@@ -1,9 +1,13 @@
 # node-provider.yaml — Metal3 NodeProvider for DGX Spark demo
 #
-# Deploys Metal3, Ironic, DHCP, and Multus on an x86 k3s node.
+# Deploys Metal3, Ironic, and DHCP on the vmetal-labelled node (where
+# br-provision is bridged via VXLAN to the DGX Spark).
 #
-# The helmValues configure nodeSelector so pods land on the x86 node
-# (where br-provision is bridged via VXLAN to the DGX Spark).
+# Multus is NOT deployed via this NodeProvider. The bundled chart hardcoded
+# resources at 50Mi which caused recurring OOM cascades under CNI churn,
+# and the chart template did not expose `resources:` for override. Install
+# thin Multus separately — see README step 10 ("Cluster configuration
+# changes" → "Multus").
 #
 # Post-apply patches still required (chart doesn't expose these):
 #   - fsGroup: 994 on metal3 securityContext
@@ -30,9 +34,8 @@ spec:
 
     deploy:
       multus:
-        enabled: true
-        helmValues: |
-          namespace: kube-system
+        # See file header — Multus is deployed separately, not via this chart.
+        enabled: false
 
       metal3:
         enabled: true
@@ -40,16 +43,26 @@ spec:
           ironic:
             image:
               tag: release-32.0
-          # Schedule on the x86 node with br-provision VXLAN
+          # Schedule on the vmetal-labelled node (br-provision VXLAN endpoint)
           nodeSelector:
-            kubernetes.io/hostname: dan-dev-1
+            node-role.kubernetes.io/vmetal: "true"
+          tolerations:
+            - key: vmetal
+              operator: Equal
+              value: "true"
+              effect: NoSchedule
 
       dhcp:
         enabled: true
         helmValues: |
-          # Schedule on the x86 node with br-provision VXLAN
+          # Schedule on the vmetal-labelled node (br-provision VXLAN endpoint)
           nodeSelector:
-            kubernetes.io/hostname: dan-dev-1
+            node-role.kubernetes.io/vmetal: "true"
+          tolerations:
+            - key: vmetal
+              operator: Equal
+              value: "true"
+              effect: NoSchedule
           networkAttachmentDefinition:
             vip: 172.22.0.2/24
             config: |
